@@ -295,6 +295,8 @@
         if ( !options.startDisabled ) {
             this.setTracking( true );
         }
+
+        this.private = THIS[ this.hash ];
     };
 
     /** @lends OpenSeadragon.MouseTracker.prototype */
