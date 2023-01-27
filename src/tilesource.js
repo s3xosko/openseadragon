@@ -898,7 +898,7 @@ $.TileSource.prototype = {
             cacheObject._renderedContext.drawImage( cacheObject._data, 0, 0 );
             //since we are caching the prerendered image on a canvas
             //allow the image to not be held in memory
-            cacheObject._data = null;
+            // cacheObject._data = null;
         }
         return cacheObject._renderedContext;
     }
