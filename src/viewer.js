@@ -458,6 +458,7 @@ $.Viewer = function( options ) {
     for (let i = 0; i < drawerCandidates.length; i++) {
 
         let drawerCandidate = drawerCandidates[i];
+        console.log("printujem drawer candidate: " + drawerCandidate);
         let Drawer = null;
 
         //if inherits from a drawer base, use it
@@ -4012,11 +4013,13 @@ $.determineDrawer = function( id ){
     for (let property in OpenSeadragon) {
         const drawer = OpenSeadragon[ property ],
             proto = drawer.prototype;
+        console.log(`determineDrawer:: property ${property} -> ` + drawer);
         if( proto &&
             proto instanceof OpenSeadragon.DrawerBase &&
             $.isFunction( proto.getType ) &&
             proto.getType.call( drawer ) === id
         ){
+            console.log("----------------FOUND-------------------");
             return drawer;
         }
     }

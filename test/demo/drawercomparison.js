@@ -22,7 +22,7 @@ const drawers = {
 //Support drawer type from the url
 const url = new URL(window.location.href);
 const drawer1 = url.searchParams.get("left") || 'canvas';
-const drawer2 = url.searchParams.get("right") || 'webgl';
+const drawer2 = url.searchParams.get("right") || 'webgl'; //'webgl';
 
 $("#title-w1").html(drawers[drawer1]);
 $("#title-w2").html(drawers[drawer2]);
