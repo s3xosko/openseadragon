@@ -246,6 +246,7 @@
          */
         addRenderingSpecifications(...specifications) {
             for (let spec of specifications) {
+                // checks correctness of specification
                 const parsed = this._parseSpec(spec);
                 if (parsed) {
                     this._programSpecifications.push(parsed);
@@ -254,15 +255,20 @@
             return true;
         }
 
-        _parseSpec(spec) {
-            if (!spec.shaders) {
-                $.console.warn("Invalid visualization: no shaders defined", spec);
-                return undefined;
-            }
+        /**
+         * Checks if there is at least one shader specified in specification object,
+         * for every shader specified defines params parameter if not already defined.
+         */
+        _parseSpec(specification) {
+            // ZBYTOCNE - prebrat s Jirkom
+            // if (!specification.shaders) {
+            //     $.console.warn("Invalid visualization: no shaders defined", specification);
+            //     return undefined;
+            // }
 
             let count = 0;
-            for (let sid in spec.shaders) {
-                const shader = spec.shaders[sid];
+            for (let shaderName in specification.shaders) {
+                const shader = specification.shaders[shaderName];
                 if (!shader.params) {
                     shader.params = {};
                 }
@@ -270,10 +276,10 @@
             }
 
             if (count < 0) {
-                $.console.warn("Invalid rendering specs: no shader configuration present!", spec);
+                $.console.warn("Invalid rendering specifications: no shader configuration present!", specification);
                 return undefined;
             }
-            return spec;
+            return specification;
         }
 
         setRenderingSpecification(i, spec) {
@@ -298,9 +304,9 @@
 
         /**
          *
-         * @param i
-         * @param order
-         * @param force
+         * @param {number} i index of desired specification
+         * @param {???} order
+         * @param {boolean} force
          * @param {object} options
          * @param {boolean} options.withHtml whether html should be also created (false if no UI controls are desired)
          * @param {string} options.textureType id of texture to be used, supported are TEXTURE_2D, TEXTURE_2D_ARRAY, TEXTURE_3D
@@ -309,22 +315,25 @@
          * @return {boolean}
          */
         buildProgram(i, order, force, options) {
-            let vis = this._programSpecifications[i];
+            let specification = this._programSpecifications[i];
 
-            if (!vis) {
+            if (!specification) {
                 $.console.error("Invalid rendering program target!", i);
                 return false;
             }
 
             if (order) {
-                vis.order = order;
+                specification.order = order;
             }
 
+            // nikde v kode nenastavujem _programs, toto bude vzdy undefined
             let program = this._programs && this._programs[i];
+            // force || undefined
             force = force || (program && !program['VERTEX_SHADER']);
+            console.log("Ak je true tak buildujem, ak false tak nie -> ");
             if (force) {
                 this._unloadProgram(program);
-                this._specificationToProgram(vis, i, options);
+                this._specificationToProgram(specification, i, options);
 
                 if (i === this._program) {
                     this._forceSwitchShader(this._program);

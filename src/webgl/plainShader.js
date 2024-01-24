@@ -41,4 +41,4 @@
 
     $.WebGLModule.ShaderMediator.registerLayer($.WebGLModule.IdentityLayer);
 
-    })(OpenSeadragon);
+})(OpenSeadragon);

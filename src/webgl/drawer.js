@@ -447,13 +447,20 @@ $.WebGL = class WebGL extends OpenSeadragon.DrawerBase {
             }
         };
         this.buildOptions = {
+            withHtml: false,
             textureType: textureType,
             //batch rendering (artifacts)
             //instanceCount: this.maxTextureUnits,
+            instanceCount: 1,
             debug: false
         };
+
+        // number of specifications in $.WebGLModule._programSpecifications: []
         const index = this.renderer.getSpecificationsCount();
+        // adds defaultRenderingSpecification to $.WebGLModule._programSpecifications
         this.renderer.addRenderingSpecifications(this.defaultRenderingSpecification);
+        // index of defaultRenderingSpecification in _programSpecifications, order??, force??,
+        // options.withHtml, options.textureType, options.instanceCount, options.debug
         this.renderer.buildProgram(index, null, true, this.buildOptions);
     }
 
