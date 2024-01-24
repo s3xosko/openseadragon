@@ -151,7 +151,9 @@
                             magFilter: readGlProp("magFilter", "LINEAR"),
                             minFilter: readGlProp("minFilter", "LINEAR"),
                         };
+
                         this.webglContext = new Context(this, glContext, options);
+                        break;
                     }
                 }
 
