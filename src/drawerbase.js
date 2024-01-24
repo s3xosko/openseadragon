@@ -63,10 +63,7 @@ $.DrawerBase = class DrawerBase{
          */
         this.container  = $.getElement( options.element );
 
-        console.log("funkcia= ", this._createDrawingElement);
         this._renderingTarget = this._createDrawingElement();
-        console.log("po funkcoa");
-
 
         this.canvas.style.width     = "100%";
         this.canvas.style.height    = "100%";

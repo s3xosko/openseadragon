@@ -458,7 +458,7 @@ $.Viewer = function( options ) {
     for (let i = 0; i < drawerCandidates.length; i++) {
 
         let drawerCandidate = drawerCandidates[i];
-        console.log("printujem drawer candidate: " + drawerCandidate);
+        // console.log("printujem drawer candidate: " + drawerCandidate);
         let Drawer = null;
 
         //if inherits from a drawer base, use it
@@ -4034,7 +4034,7 @@ $.determineDrawer = function( id ){
             $.isFunction( proto.getType ) &&
             proto.getType.call( drawer ) === id
         ){
-            console.log("----------------FOUND-------------------");
+            // console.log("----------------FOUND-------------------");
             return drawer;
         }
     }

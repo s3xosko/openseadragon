@@ -58,6 +58,7 @@
          * @memberOf OpenSeadragon.WebGLModule
          */
         constructor(incomingOptions) {
+            // console.log("vytvaram renderer hihi");
             super();
 
             /////////////////////////////////////////////////////////////////////////////////

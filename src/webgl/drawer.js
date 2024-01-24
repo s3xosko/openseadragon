@@ -152,7 +152,6 @@ $.WebGL = class WebGL extends OpenSeadragon.DrawerBase {
      * @returns {Element} the canvas to draw into
      */
     _createDrawingElement(){
-        console.log("ta som tuuuuuuuuuuuuuuuuuuu");
         this.renderer = new $.WebGLModule($.extend(this.options, {
             uniqueId: "openseadragon",
             "2.0": {

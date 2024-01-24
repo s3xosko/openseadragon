@@ -3,6 +3,7 @@
 (function($) {
 
     $.WebGLModule.determineContext = function( version ) {
+        // console.log("zistujem kontext, asi takym sposobom ze zas vsetko hladam hah");
         const namespace = OpenSeadragon.WebGLModule;
         for (let property in namespace) {
             const context = namespace[ property ],
@@ -250,6 +251,7 @@
          * @param options
          */
         constructor(renderer, gl, options) {
+            // console.log("konstruujem webgl20 implementaciu");
             super(renderer, gl, "2.0", options);
 
             // this.vao = gl.createVertexArray();
