@@ -4013,7 +4013,22 @@ $.determineDrawer = function( id ){
     for (let property in OpenSeadragon) {
         const drawer = OpenSeadragon[ property ],
             proto = drawer.prototype;
-        console.log(`determineDrawer:: property ${property} -> ` + drawer);
+        // console.log(`determineDrawer:: property ${property} -> ` + drawer);
+        // if (proto) {
+        //     console.log("proto");
+
+        // if (proto instanceof OpenSeadragon.DrawerBase) {
+        //     console.log("proto instanceof OpenSeadragon.DrawerBase");
+
+        // if ( $.isFunction( proto.getType ) ) {
+        //     console.log(" $.isFunction( proto.getType )");
+        //     console.log(id, "doslo mi");
+        //     console.log(proto.getType.call( drawer ), "chcem aby to bolo");
+
+        // if (proto.getType.call( drawer ) === id) {
+        //     console.log("proto.getType.call( drawer ) === id");
+        // }}}}
+
         if( proto &&
             proto instanceof OpenSeadragon.DrawerBase &&
             $.isFunction( proto.getType ) &&

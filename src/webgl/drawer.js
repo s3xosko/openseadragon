@@ -144,14 +144,15 @@ $.WebGL = class WebGL extends OpenSeadragon.DrawerBase {
     }
 
     getType() {
-        return 'universal_webgl';
+        return 'universalWebgl';
     }
 
     /**
      * create the HTML element (canvas in this case) that the image will be drawn into
      * @returns {Element} the canvas to draw into
      */
-    createDrawingElement(){
+    _createDrawingElement(){
+        console.log("ta som tuuuuuuuuuuuuuuuuuuu");
         this.renderer = new $.WebGLModule($.extend(this.options, {
             uniqueId: "openseadragon",
             "2.0": {
