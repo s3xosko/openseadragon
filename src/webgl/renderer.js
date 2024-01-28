@@ -256,8 +256,8 @@
         }
 
         /**
-         * Checks if there is at least one shader specified in specification object,
-         * for every shader specified defines params parameter if not already defined.
+         * Checks if there is at least one shader specified in specification object.
+         * For every shader specified defines params parameter if not already defined.
          */
         _parseSpec(specification) {
             // ZBYTOCNE - prebrat s Jirkom
@@ -330,8 +330,9 @@
             let program = this._programs && this._programs[i];
             // force || undefined
             force = force || (program && !program['VERTEX_SHADER']);
-            console.log("Ak je true tak buildujem, ak false tak nie -> ");
+            console.log("Ak je true tak buildujem, ak false tak nie -> ", force);
             if (force) {
+                // detach old vertex + fragment shader
                 this._unloadProgram(program);
                 this._specificationToProgram(specification, i, options);
 
@@ -421,7 +422,8 @@
          */
         /* zly warning asi mal byt nazov funkcie
          naco je dane ze sources || [], malo by byt jasne ze neposlem undefined premennu */
-        setSources(sources) {
+        /* nikde nieje volana */
+         setSources(sources) {
             if (!this._initialized) {
                 $.console.warn("$.WebGLModule::useSpecification(): not initialized.");
                 return;
@@ -724,6 +726,10 @@
             }
         }
 
+        /**
+         * Detach old fragment + vertex shader
+         * @param {???} program program that was being used until now
+         */
         _unloadProgram(program) {
             if (program) {
                 //must remove before attaching new
@@ -822,7 +828,15 @@
             }
         }
 
+        /**
+         *
+         * @param {Object} spec specification to be used
+         * @param {*} idx
+         * @param {*} options
+         * @returns
+         */
         _specificationToProgram(spec, idx, options) {
+            // nastavi _dataSources na [__gdnu__ * pocet datareferenci v spec.shaders.ALL.datareferences]
             this._updateRequiredDataSources(spec);
             let gl = this.gl;
             let program;
@@ -891,12 +905,19 @@
             });
         }
 
-        _updateRequiredDataSources(specs) {
+        /**
+         * Works on _origDataSources and _dataSources variables.
+         * Sets _dataSources to ??? tu som sa stratil neviem co to ma robit
+         * Okej myslim si ze nastavi _dataSources na [__gdnu__ * pocet referenci v spec.shaders.ALL.datareferences]
+         * @param {Object} spec specification
+         */
+        // Poznamka setSources nieje nikde volana, tj. _origDataSources budu vzdy na zaciatku []
+        _updateRequiredDataSources(spec) {
             //for now just request all data, later decide in the context on what to really send
             //might in the future decide to only request used data, now not supported
             let usedIds = new Set();
-            for (let key in specs.shaders) {
-                let layer = specs.shaders[key];
+            for (let key in spec.shaders) {
+                let layer = spec.shaders[key];
                 if (layer) {
                     for (let x of layer.dataReferences) {
                         usedIds.add(x);
@@ -906,11 +927,14 @@
             usedIds = [...usedIds].sort();
             this._dataSources = [];
 
+            // usedIds = vsetky dataReferences z specification objektu ktore su definovane
+            // _origDataSources su [], cize sa napushuje do nich <najvacsie id + 1> * "__generated_do_not_use__"
             while (usedIds[usedIds.length - 1] >= this._origDataSources.length) {
                 //make sure values are set if user did not provide
                 this._origDataSources.push("__generated_do_not_use__");
             }
 
+            // tak toto nastavi _dataSources na [__gdnu__ * usedIds.length]
             for (let id of usedIds) {
                 this._dataSources.push(this._origDataSources[id]);
             }
