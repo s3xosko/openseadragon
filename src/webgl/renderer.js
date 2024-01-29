@@ -260,7 +260,7 @@
          * For every shader specified defines params parameter if not already defined.
          */
         _parseSpec(specification) {
-            // ZBYTOCNE - prebrat s Jirkom
+            // ZBYTOCNE? - prebrat s Jirkom
             // if (!specification.shaders) {
             //     $.console.warn("Invalid visualization: no shaders defined", specification);
             //     return undefined;
@@ -305,8 +305,8 @@
         /**
          *
          * @param {number} i index of desired specification
-         * @param {???} order
-         * @param {boolean} force
+         * @param {???} order ???
+         * @param {boolean} force ???
          * @param {object} options
          * @param {boolean} options.withHtml whether html should be also created (false if no UI controls are desired)
          * @param {string} options.textureType id of texture to be used, supported are TEXTURE_2D, TEXTURE_2D_ARRAY, TEXTURE_3D
@@ -326,14 +326,15 @@
                 specification.order = order;
             }
 
-            // nikde v kode nenastavujem _programs, toto bude vzdy undefined
+
             let program = this._programs && this._programs[i];
-            // force || undefined
+            // force || missing vertex shader in program
             force = force || (program && !program['VERTEX_SHADER']);
             console.log("Ak je true tak buildujem, ak false tak nie -> ", force);
             if (force) {
                 // detach old vertex + fragment shader
                 this._unloadProgram(program);
+                // ???
                 this._specificationToProgram(specification, i, options);
 
                 if (i === this._program) {
@@ -570,7 +571,7 @@
          * Get current program, reset if invalid
          * @return {number} program index
          */
-        /* PRECO JE TU TATO KONTORLAAAA */
+        /* preco je tu tato kontrola? */
         getCurrentProgramIndex() {
             if (this._program < 0 || this._program >= this._programSpecifications.length) {
                 this._program = 0;
@@ -727,8 +728,8 @@
         }
 
         /**
-         * Detach old fragment + vertex shader
-         * @param {???} program program that was being used until now
+         * Detach fragment + vertex shader from <program>
+         * @param {WebGLProgram} program
          */
         _unloadProgram(program) {
             if (program) {
@@ -819,20 +820,29 @@
             }
         }
 
-        _detachShader(program, type) {
-            let shader = program[type];
+        /**
+         * Deletes <shaderType> shader from <program>
+         * @param {WebGLProgram} program
+         * @param {string} shaderType
+         */
+        _detachShader(program, shaderType) {
+            let shader = program[shaderType];
             if (shader) {
                 this.gl.detachShader(program, shader);
                 this.gl.deleteShader(shader);
-                program[type] = null;
+                program[shaderType] = null;
             }
         }
 
         /**
          *
          * @param {Object} spec specification to be used
-         * @param {*} idx
-         * @param {*} options
+         * @param {number} idx index of specification in this._programSpecifications
+         * @param {object} options
+         * @param {boolean} options.withHtml whether html should be also created (false if no UI controls are desired)
+         * @param {string} options.textureType id of texture to be used, supported are TEXTURE_2D, TEXTURE_2D_ARRAY, TEXTURE_3D
+         * @param {string} options.instanceCount number of instances to draw at once
+         * @param {boolean} options.debug draw debugging info
          * @returns
          */
         _specificationToProgram(spec, idx, options) {
@@ -841,6 +851,7 @@
             let gl = this.gl;
             let program;
 
+            // TU SOM SKONCIL, prechadzam ze co robi totot...
             if (!this._programs[idx]) {
                 program = gl.createProgram();
                 this._programs[idx] = program;
@@ -849,11 +860,13 @@
                 //init shader factories and unique id's
                 for (let key in spec.shaders) {
                     let layer = spec.shaders[key];
+                    // tento if je potrebny??
                     if (layer) {
                         let ShaderFactoryClass = $.WebGLModule.ShaderMediator.getClass(layer.type);
                         if (layer.type === "none") {
                             continue;
                         }
+
                         this._initializeShaderFactory(ShaderFactoryClass, layer, index++);
                     }
                 }
