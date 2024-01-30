@@ -205,7 +205,7 @@ module.exports = function(grunt) {
             }
         },
         watch: {
-            files: [ "Gruntfile.js", "src/*.js", "images/*" ],
+            files: [ "Gruntfile.js", "src/*.js", "images/*", "src/*/*.js" ],
             tasks: "watchTask"
         },
         eslint: {

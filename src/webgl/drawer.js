@@ -1,4 +1,5 @@
 // 700 riadkov
+// test change
 
 /*
  * OpenSeadragon - WebGLDrawer
