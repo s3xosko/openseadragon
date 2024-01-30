@@ -82,6 +82,10 @@
            this.viewer.addHandler("tile-ready", ev => this._tileReadyHandler(ev));
            this.viewer.addHandler("image-unloaded", ev => this._imageUnloadedHandler(ev));
 
+           // Reject listening for the tile-drawing and tile-drawn events, which this drawer does not fire
+           this.viewer.rejectEventHandler("tile-drawn", "The WebGLDrawer does not raise the tile-drawn event");
+           this.viewer.rejectEventHandler("tile-drawing", "The WebGLDrawer does not raise the tile-drawing event");
+
            // this.viewer and this.canvas are part of the public DrawerBase API
            // and are defined by the parent DrawerBase class. Additional setup is done by
            // the private _setupCanvases and _setupRenderer functions.
@@ -281,8 +285,6 @@
                     // occured in the TravisCI tests, though it did not happen when testing locally either in
                     // a browser or on the command line via grunt test.
 
-                    // use plain console.error instead of $.console.error in order to have the message show up in the test log.
-                    console.error(`There was a WebGL problem: bad value for MAX_TEXTURE_IMAGE_UNITS (${maxTextures})`);
                     throw(new Error(`WegGL error: bad value for gl parameter MAX_TEXTURE_IMAGE_UNITS (${maxTextures}). This could happen
                     if too many contexts have been created and not released, or there is another problem with the graphics card.`));
                 }

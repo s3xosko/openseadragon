@@ -48,6 +48,11 @@
 class HTMLDrawer extends $.DrawerBase{
     constructor(options){
         super(options);
+
+        // Reject listening for the tile-drawing event, which this drawer does not fire
+        this.viewer.rejectEventHandler("tile-drawing", "The HTMLDrawer does not raise the tile-drawing event");
+        // Since the tile-drawn event is fired by this drawer, make sure handlers can be added for it
+        this.viewer.allowEventHandler("tile-drawn");
     }
 
     /**
