@@ -53,7 +53,7 @@
          * @param {boolean} incomingOptions.debug debug mode default false
          * @param {function} incomingOptions.ready function called when ready
          * @param {function} incomingOptions.resetCallback function called when user input changed, e.g. changed output of the current rendering
-         *   signature f({Visualization} oldVisualisation,{Visualization} newVisualisation)
+         * signature f({WebGLModule.VisualizationConfig} oldVisualisation,{WebGLModule.VisualizationConfig} newVisualisation)
          * @constructor
          * @memberOf OpenSeadragon.WebGLModule
          */
@@ -166,7 +166,7 @@
                 $.console.error(e);
                 return;
             }
-            $.console.log(`WebGL ${this.webglContext.getVersion()} Rendering module (ID ${this.uniqueId})`);
+            $.console.log(`WebGL ${this.webglContext.getVersion()} Rendering module (ID ${this.uniqueId || '<main>'})`);
         }
 
         /**
@@ -760,6 +760,10 @@
             if (!this.debug) {
                 return;
             }
+            if (!this.supportsHtmlControls()) {
+                console.warn(`WebGL Renderer ${this.uniqueId} does not support visual rendering without enabled HTML control!`);
+                return;
+            }
 
             let container = document.getElementById(`test-${this.uniqueId}-webgl`);
             if (!container) {
@@ -773,6 +777,9 @@
         }
 
         _renderDebugIO(inputData, outputData) {
+            if (!this.supportsHtmlControls()) {
+                return;
+            }
             let input = document.getElementById(`test-${this.uniqueId}-webgl-input`);
             let output = document.getElementById(`test-${this.uniqueId}-webgl-output`);
 
@@ -867,7 +874,7 @@
                             continue;
                         }
 
-                        this._initializeShaderFactory(ShaderFactoryClass, layer, index++);
+                        this._initializeShaderFactory(spec, ShaderFactoryClass, layer, index++);
                     }
                 }
             } else {
@@ -887,7 +894,7 @@
                             continue;
                         }
                         let ShaderFactoryClass = $.WebGLModule.ShaderMediator.getClass(layer.type);
-                        this._initializeShaderFactory(ShaderFactoryClass, layer, layer._index);
+                        this._initializeShaderFactory(spec, ShaderFactoryClass, layer, layer._index);
                     }
                 }
             }
@@ -901,21 +908,36 @@
             return idx;
         }
 
-        _initializeShaderFactory(ShaderFactoryClass, layer, idx) {
+        _initializeShaderFactory(spec, ShaderFactoryClass, layer, idx) {
             if (!ShaderFactoryClass) {
                 layer.error = "Unknown layer type.";
-                layer.desc = `The layer type '${layer.type}' has no associated factory. Missing in 'shaderSources'.`;
-                $.console.warn("Skipping layer " + layer.name);
+                layer.desc = `The layer type '${layer.type}' has no associated factory.`;
+                console.warn("Skipping layer " + layer.name);
                 return;
             }
+            const _this = this;
             layer._index = idx;
             layer.visible = layer.visible === undefined ? true : layer.visible;
-            layer._renderContext = new ShaderFactoryClass(`${this.uniqueId}${idx}`, layer.params || {}, {
+            layer._renderContext = new ShaderFactoryClass(`${this.uniqueId}${idx}`, {
                 layer: layer,
                 webgl: this.webglContext,
                 invalidate: this.resetCallback,
-                rebuild: this.rebuildCurrentProgram.bind(this, undefined)
+                interactive: this.supportsHtmlControls(),
+                rebuild: this.rebuildCurrentProgram.bind(this, undefined),
+                refetch: function() {
+                    _this._updateRequiredDataSources(spec);
+                    //TODO: how to tell openseadragon to invalidate the whole data source?
+                    // !!implement!!
+                    // used to call: _this.visualisationChanged(visualization, visualization);
+                    //  --> no longer part of api
+                    throw "Not yet implemented!";
+                }
             });
+            layer._renderContext.construct(layer.params || {}, layer.dataReferences);
+
+            if (!layer._renderContext.initialized()) {
+                console.error(`Invalid shader ${ShaderFactoryClass.name()}! Construct must call super implementation!`);
+            }
         }
 
         /**
@@ -959,6 +981,6 @@
      * to distinguish uniquely between static generated code parts
      * @type {RegExp}
      */
-    $.WebGLModule.idPattern = /[0-9a-zA-Z_]*/;
+    $.WebGLModule.idPattern = /^(?!_)(?:(?!__)[0-9a-zA-Z_])*$/;
 
-    })(OpenSeadragon);
+})(OpenSeadragon);

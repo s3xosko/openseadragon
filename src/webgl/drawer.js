@@ -83,10 +83,15 @@ $.WebGL = class WebGL extends OpenSeadragon.DrawerBase {
             }
         });
         this.viewer.world.addHandler("add-item", (e) => {
+            //todo: use this.renderer.uniqueId to set rendering targets
             let shader = e.item.source.shader;
             if (shader) {
+                if (Number.isInteger(shader._programIndexTarget)) {
+                    return; //already configured, multiple drawers
+                }
                 const targetIndex = this.renderer.getSpecificationsCount();
                 if (this.renderer.addRenderingSpecifications(shader)) {
+                    this.renderer.buildProgram(targetIndex, null, true, this.buildOptions);
                     shader._programIndexTarget = targetIndex;
                     return;
                 }
@@ -154,7 +159,7 @@ $.WebGL = class WebGL extends OpenSeadragon.DrawerBase {
      */
     _createDrawingElement(){
         this.renderer = new $.WebGLModule($.extend(this.options, {
-            uniqueId: "openseadragon",
+            uniqueId: "openseadragon", //todo OSD creates multiple drawers - navigator + main + possibly other - find way to differentiate
             "2.0": {
                 canvasOptions: {
                     stencil: true

@@ -131,26 +131,37 @@
         /**
          * Global supported options
          * @param {string} id unique ID among all webgl instances and shaders
-         * @param {OpenSeadragon.WebGLModule.ShaderLayerParams} options
-         *  options.channel: "r", "g" or "b" channel to sample, default "r"
-         *  options.use_mode: blending mode - default alpha ("show"), custom blending ("mask") and clipping mask blend ("mask_clip")
-         *  options.use_[*]: filtering, gamma/exposure/logscale with a float filter parameter (e.g. "use_gamma" : 1.5)
          * @param {object} privateOptions options that should not be touched, necessary for linking the layer to the core
          */
-        constructor(id, options, privateOptions) {
+        constructor(id, privateOptions) {
             this.uid = id;
-            this._setContextShaderLayer(privateOptions.layer);
-            /* what the nazov means */
-            this.webgconstructorlidate = privateOptions.invalidate;
-            //use with care...
-            this._rebuild = privateOptions.rebuild;
+            if (!$.WebGLModule.idPattern.test(this.uid)) {
+                console.error("Invalid ID for the shader: id must match to the pattern", $.WebGLModule.idPattern, id);
+            }
+            this._setContextVisualisationLayer(privateOptions.layer);
 
+            //todo custom control names share namespace with this API - unique names or controls in seperate object?
+            this.webglContext = privateOptions.webgl;
+            this.invalidate = privateOptions.invalidate;
+            //use with care... todo document
+            this._rebuild = privateOptions.rebuild;
+            this._refetch = privateOptions.refetch;
+            this._hasInteractiveControls = privateOptions.interactive;
+        }
+
+        /**
+         * Manual constructor, must call super.construct(...) if overridden, but unlike
+         * constructor the call can be adjusted (e.g. adjust option values)
+         * @param {WebGLModule.ShaderLayerParams} options
+         *  options.use_channel[X]: "r", "g" or "b" channel to sample index X, default "r"
+         *  options.use_mode: blending mode - default alpha ("show"), custom blending ("mask") and clipping mask blend ("mask_clip")
+         * @param {[number]} dataReferences indexes of data being requested for this shader
+         */
+        construct(options, dataReferences) {
+            this._ownedControls = [];
             this._buildControls(options);
             this.resetChannel(options);
             this.resetMode(options);
-            this._blendUniform = null;
-            this._clipUniform = null;
-            this.blendMode = $.WebGLModule.BLEND_MODE["source-over"];
         }
 
         /**
@@ -171,20 +182,11 @@
         getFragmentShaderDefinition() {
             this._blendUniform = `${this.uid}_blend`;
             this._clipUniform = `${this.uid}_clip`;
-            let controls = this.constructor.defaultControls,
-                glsl = [`uniform int ${this._blendUniform};`, `uniform bool ${this._clipUniform};`];
-            for (let control in controls) {
-                if (control.startsWith("use_")) {
-                    continue;
-                }
-
-                const controlObject = this[control];
-                if (controlObject) {
-                    let code = controlObject.define();
-                    if (code) {
-                        code = code.trim();
-                        glsl.push(code);
-                    }
+            let glsl = [`uniform int ${this._blendUniform};`, `uniform bool ${this._clipUniform};`];
+            for (let control of this._ownedControls) {
+                let code = this[control].define();
+                if (code) {
+                    glsl.push(code.trim());
                 }
             }
             return glsl.join("\n");
@@ -222,16 +224,9 @@
                 gl.uniform1i(this._clipLoc, 0); //todo
             }
 
-            let controls = this.constructor.defaultControls;
-            for (let control in controls) {
-                if (control.startsWith("use_")) {
-                    continue;
-                }
-
-                const controlObject = this[control];
-                if (controlObject) {
-                    controlObject.glDrawing(program, gl);
-                }
+            for (let control of this._ownedControls) {
+                //FIXME: dimension param
+                this[control].glDrawing(program, gl);
             }
         }
 
@@ -248,16 +243,8 @@
                 this._blendLoc = gl.getUniformLocation(program, this._blendUniform);
             }
 
-            let controls = this.constructor.defaultControls;
-            for (let control in controls) {
-                if (control.startsWith("use_")) {
-                    continue;
-                }
-
-                const controlObject = this[control];
-                if (controlObject) {
-                    controlObject.glLoaded(program, gl);
-                }
+            for (let control of this._ownedControls) {
+                this[control].glLoaded(program, gl);
             }
         }
 
@@ -267,16 +254,11 @@
          * (might be multiple times), after htmlControls()
          */
         init() {
-            let controls = this.constructor.defaultControls;
-            for (let control in controls) {
-                if (control.startsWith("use_")) {
-                    continue;
-                }
-
-                const controlObject = this[control];
-                if (controlObject) {
-                    controlObject.init();
-                }
+            if (!this.initialized()) {
+                console.error("Shader not properly initialized! Call shader.construct()!");
+            }
+            for (let control of this._ownedControls) {
+                this[control].init();
             }
         }
 
@@ -285,16 +267,11 @@
          * @return {string} HTML controls for the particular shader
          */
         htmlControls() {
-            let controls = this.constructor.defaultControls,
-                html = [];
-            for (let control in controls) {
-                if (control.startsWith("use_")) {
-                    continue;
-                }
-
-                const controlObject = this[control];
-                if (controlObject) {
-                    html.push(controlObject.toHtml(true));
+            let html = [];
+            for (let control of this._ownedControls) {
+                const target = this[control];
+                if (target) {
+                    html.push(target.toHtml(true));
                 }
             }
             return html.join("");
@@ -312,6 +289,25 @@
             if (!container[key]) {
                 container[key] = code;
             }
+        }
+
+        /**
+         * @param id control id to delete
+         */
+        removeControl(id) {
+            if (!this._ownedControls[id]) {
+                return;
+            }
+            delete this._ownedControls[id];
+            delete this[id];
+        }
+
+        /**
+         * Check if shader is initialized.
+         * @return {boolean}
+         */
+        initialized() {
+            return !!this._ownedControls;
         }
 
         /**
@@ -491,13 +487,34 @@
             this.__mode = this.constructor.modes[this._mode] || "show";
         }
 
+        /**
+         *
+         * @param name the control named ID which will be attached to the control
+         * @param {object} controlOptions control options defined by the underlying
+         *  control, must have at least 'type' property
+         * @param {object} buildContext item with the same properties
+         *  as static.defaultControls
+         */
+        addControl(name, controlOptions, buildContext) {
+            if (this[name]) {
+                console.warn(`Shader ${this.constructor.name()} overrides as a control name ${name} existing property!`);
+            }
+
+            this._ownedControls.push(name);
+            const control = $.WebGLModule.UIControls.build(this, name, controlOptions,
+                buildContext.default, buildContext.accepts, buildContext.required, this._hasInteractiveControls);
+            this[name] = control;
+            return control;
+        }
+
         ////////////////////////////////////
         ////////// PRIVATE /////////////////
         ////////////////////////////////////
 
 
         _buildControls(options) {
-            let controls = this.constructor.defaultControls;
+            let controls = this.constructor.defaultControls,
+                customParams = this.constructor.customParams;
 
             if (controls.opacity === undefined || (typeof controls.opacity === "object" && !controls.opacity.accepts("float"))) {
                 controls.opacity = {
@@ -507,20 +524,61 @@
             }
 
             for (let control in controls) {
+                if (control.startsWith("use_")) {
+                    continue;
+                }
                 let buildContext = controls[control];
 
                 if (buildContext) {
-                    if (control.startsWith("use_")) {
-                        continue;
+                    this.addControl(control, options[control], buildContext);
+                    continue;
+                }
+
+                let customContext = customParams[control];
+                if (customContext) {
+                    let targetType;
+                    const dType = typeof customContext.default,
+                        rType = typeof customContext.required;
+                    if (dType !== rType) {
+                        console.error("Custom parameters for shader do not match!",
+                            dType, rType, this.constructor.name());
                     }
 
-                    this[control] = $.WebGLModule.UIControls.build(this, control, options[control],
-                        buildContext.default, buildContext.accepts, buildContext.required);
+                    if (rType !== 'undefined') {
+                        targetType = rType;
+                    } else if (dType !== 'undefined') {
+                        targetType = dType;
+                    } else {
+                        targetType = 'object';
+                    }
+
+                    if (targetType === 'object') {
+                        let knownOptions = options[control];
+                        if (!knownOptions) {
+                            knownOptions = options[control] = {};
+                        }
+                        if (customContext.default) {
+                            $.extend(knownOptions, customContext.default);
+                        }
+                        if (options[control]) {
+                            $.extend(knownOptions, options[control]);
+                        }
+                        if (customContext.required) {
+                            $.extend(knownOptions, customContext.required);
+                        }
+                    } else {
+                        if (customContext.required !== undefined) {
+                            options[control] = customContext.required;
+                        }
+                        else if (options[control] === undefined) {
+                            options[control] = customContext.default;
+                        }
+                    }
                 }
             }
         }
 
-        _setContextShaderLayer(visualisationLayer) {
+        _setContextVisualisationLayer(visualisationLayer) {
             this.__visualisationLayer = visualisationLayer;
             if (!this.__visualisationLayer.cache) {
                 this.__visualisationLayer.cache = {};
@@ -563,12 +621,30 @@
      * }
      * reads by default for texture 1 channels 'bg', second texture is always forced to read 'rg',
      * textures apply gamma filter with 0.5 by default if not overridden
-     * todo: allow to use_[filter][X] to distinguish between textures
-     *
+     * todo: allow also custom object without structure being specified (use in custom manner,
+     *  but limited in automated docs --> require field that summarises its usage)
      * @member {object}
      */
     $.WebGLModule.ShaderLayer.defaultControls = {};
 
+    /**
+     * Declare custom parameters for documentation purposes.
+     * Can set default values to provide sensible defaults.
+     * Requires only 'usage' parameter describing the use.
+     * Unlike controls, these values are not processed in any way.
+     * Of course you don't have to define your custom parameters,
+     * but then these won't be documented in any nice way. Note that
+     * the value can be an object, or a different value (e.g., an array)
+     * {
+     *     customParamId: {
+     *         default: {myItem: 1, myValue: "string" ...}, [OPTIONAL]
+     *         usage: "This parameter can be used like this and that.",
+     *         required: {type: <> ...} [OPTIONAL]
+     *     }, ...
+     * }
+     * @type {any}
+     */
+    $.WebGLModule.ShaderLayer.customParams = {};
 
     /**
      * todo make blending more 'nice'
@@ -642,12 +718,15 @@
          * @param {object} defaultParams default parameters that the shader might leverage above defaults of the control itself
          * @param {function} accepts required GLSL type of the control predicate, for compatibility typechecking
          * @param {object} requiredParams parameters that override anything sent by user or present by defaultParams
+         * @param {boolean} interactivityEnabled must be false if HTML nodes are not managed
          * @return {OpenSeadragon.WebGLModule.UIControls.IControl}
          */
-        static build(context, name, params, defaultParams = {}, accepts = () => true, requiredParams = {}) {
-            //if not an object, but a value: make it the default one
+        static build(context, name, params, defaultParams = {}, accepts = () => true, requiredParams = {}, interactivityEnabled = true) {            //if not an object, but a value: make it the default one
             if (!(typeof params === 'object')) {
                 params = {default: params};
+            }
+            if (!interactivityEnabled) {
+                params.interactive = false;
             }
             let originalType = defaultParams.type;
 
@@ -656,7 +735,7 @@
             if (!this._items[defaultParams.type]) {
                 if (!this._impls[defaultParams.type]) {
                     return this._buildFallback(defaultParams.type, originalType, context,
-                        name, params, defaultParams, accepts, requiredParams);
+                        name, params, defaultParams, accepts, requiredParams, interactivityEnabled);
                 }
 
                 let cls = new this._impls[defaultParams.type](
@@ -666,7 +745,7 @@
                     return cls;
                 }
                 return this._buildFallback(defaultParams.type, originalType, context,
-                    name, params, defaultParams, accepts, requiredParams);
+                    name, params, defaultParams, accepts, requiredParams, interactivityEnabled);
             } else {
                 let contextComponent = this.getUiElement(defaultParams.type);
                 let comp = new $.WebGLModule.UIControls.SimpleUIControl(
@@ -676,7 +755,7 @@
                     return comp;
                 }
                 return this._buildFallback(contextComponent.glType, originalType, context,
-                    name, params, defaultParams, accepts, requiredParams);
+                    name, params, defaultParams, accepts, requiredParams, interactivityEnabled);
             }
         }
 
@@ -743,7 +822,7 @@
         /////////////////////////
 
 
-        static _buildFallback(newType, originalType, context, name, params, defaultParams, requiredType, requiredParams) {
+        static _buildFallback(newType, originalType, context, name, params, defaultParams, requiredType, requiredParams, interactivityEnabled) {
             //repeated check when building object from type
 
             params.interactive = false;
@@ -753,7 +832,7 @@
             } else { //otherwise try to build with originalType (default)
                 params.type = originalType;
                 console.warn("Incompatible UI control type '" + newType + "': making the input non-interactive.");
-                return this.build(context, name, params, defaultParams, requiredType, requiredParams);
+                return this.build(context, name, params, defaultParams, requiredType, requiredParams, interactivityEnabled);
             }
         }
     };
@@ -1081,6 +1160,10 @@
          *  - these can be referenced in this.init(...)
          *  - should respect this.params.interactive attribute and return non-interactive output if interactive=false
          *      - don't forget to no to work with DOM elements in init(...) in this case
+         *
+         * todo: when overrided value before 'init' call on params, toHtml was already called, changes might not get propagated
+         *  - either: delay toHtml to trigger insertion later (not nice)
+         *  - do not allow changes before init call, these changes must happen at constructor
          */
         toHtml(breakLine = true, controlCss = "") {
             throw "WebGLModule.UIControls.IControl::toHtml() must be implemented.";
@@ -1291,13 +1374,13 @@
             super(context, name, webGLVariableName, uniq);
             this.component = intristicComponent;
             this._params = this.getParams(params);
-
-            this.encodedValue = this.load(this.params.default);
-            //this unfortunatelly makes cache erasing and rebuilding vis impossible, the shader part has to be fully re-instantiated
-            this.params.default = this.encodedValue;
         }
 
         init() {
+            this.encodedValue = this.load(this.params.default);
+            //this unfortunatelly makes cache erasing and rebuilding vis impossible, the shader part has to be fully re-instantiated
+            this.params.default = this.encodedValue;
+
             this.value = this.component.normalize(this.component.decode(this.encodedValue), this.params);
 
             if (this.params.interactive) {
