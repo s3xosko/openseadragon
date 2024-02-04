@@ -908,6 +908,7 @@
             return idx;
         }
 
+        // layer = dictionary so shaderom
         _initializeShaderFactory(spec, ShaderFactoryClass, layer, idx) {
             if (!ShaderFactoryClass) {
                 layer.error = "Unknown layer type.";
@@ -921,8 +922,10 @@
             layer._renderContext = new ShaderFactoryClass(`${this.uniqueId}${idx}`, {
                 layer: layer,
                 webgl: this.webglContext,
+                // dava sa UI controls nech to volaju ked sa zmeni ich hodnota (triggeruje prekreslenie viewportu)
                 invalidate: this.resetCallback,
                 interactive: this.supportsHtmlControls(),
+                // triggeruje prekompilovanie a prekreslenie viewportu
                 rebuild: this.rebuildCurrentProgram.bind(this, undefined),
                 refetch: function() {
                     _this._updateRequiredDataSources(spec);
